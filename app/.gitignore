@@ -1,0 +1,4 @@
+# vapid private key is in pwa2/ (outside webapp), not here
+# just in case:
+vapid_private*.json
+*.pem

@@ -1,0 +1,30 @@
+{
+  "name": "Auctova",
+  "short_name": "Auctova",
+  "start_url": "/p-0a33d13f77ba917c/app/",
+  "scope": "/p-0a33d13f77ba917c/app/",
+  "display": "standalone",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
+  "description": "Auctova ops dashboard",
+  "icons": [
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

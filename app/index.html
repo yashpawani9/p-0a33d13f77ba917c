@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Auctova">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>Auctova</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#14213d;--card:#1f3160;--accent:#fca311;--dim:#9fb0d0;--red:#e63946;--green:#2a9d8f}
+body{margin:0;background:var(--bg);color:#fff;font:600 17px/1.5 -apple-system,system-ui,sans-serif;
+  padding-top:calc(env(safe-area-inset-top)+0px);padding-bottom:calc(env(safe-area-inset-bottom)+80px);
+  min-height:100vh;overflow-x:hidden}
+#stale-banner{display:none;background:var(--red);color:#fff;text-align:center;padding:10px 16px;
+  font-size:15px;position:sticky;top:0;z-index:99}
+#tab-bar{position:fixed;bottom:0;left:0;right:0;background:#0d1a30;border-top:1px solid #2a3f6a;
+  display:flex;overflow-x:auto;z-index:50;padding-bottom:env(safe-area-inset-bottom);
+  scrollbar-width:none}
+#tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{flex:0 0 auto;background:none;border:none;color:var(--dim);font:600 13px system-ui;
+  padding:10px 14px 6px;cursor:pointer;border-top:2px solid transparent;white-space:nowrap}
+.tab-btn.active{color:var(--accent);border-top-color:var(--accent)}
+.pane{display:none;padding:16px 16px 0;max-width:420px;margin:0 auto}
+.pane.active{display:block}
+.card{background:var(--card);border-radius:14px;padding:16px;margin:0 0 12px}
+h2{font-size:18px;margin:0 0 12px;color:#fff}
+h3{font-size:15px;margin:0 0 8px;color:var(--dim);font-weight:600}
+.btn{display:block;width:100%;background:var(--accent);color:#14213d;font:700 17px system-ui;
+  border:none;border-radius:12px;padding:14px;margin:8px 0;cursor:pointer}
+.btn.sec{background:#2e4a8a;color:#fff}
+.btn.red{background:var(--red);color:#fff}
+.btn.grn{background:var(--green);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+input,select,textarea{width:100%;background:#0d1a30;border:1px solid #2a3f6a;border-radius:10px;
+  color:#fff;font:600 16px system-ui;padding:10px 12px;margin:4px 0 8px;-webkit-appearance:none}
+textarea{min-height:80px;resize:vertical}
+.reply{background:#0d1a30;border-radius:10px;padding:10px 12px;font-size:14px;color:var(--dim);
+  min-height:2em;white-space:pre-wrap;word-break:break-word;margin-top:6px}
+.ny-item{background:var(--card);border-radius:12px;padding:12px;margin:0 0 10px}
+.ny-item p{margin:0 0 8px;font-size:15px;line-height:1.4}
+.ny-actions{display:flex;gap:8px}
+.ny-actions button{flex:1;background:#2a9d8f;color:#fff;font:700 15px system-ui;border:none;
+  border-radius:10px;padding:11px 0;cursor:pointer}
+.ny-actions button.rej{background:#e63946}
+.ny-actions button.rr{background:#2e4a8a}
+.ny-actions button:disabled{opacity:.4}
+.goal-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2a3f6a;font-size:15px}
+.goal-row:last-child{border:none}
+.goal-num{color:var(--accent);font-size:22px;font-weight:800}
+#push-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.small{font-size:13px;color:var(--dim)}
+.chat-line{font-size:13px;color:var(--dim);border-bottom:1px solid #2a3f6a;padding:5px 0;
+  word-break:break-word}
+.sum-box{background:#0d1a30;border-radius:10px;padding:10px;font-size:14px;line-height:1.5;
+  white-space:pre-wrap;margin-bottom:10px}
+#no-link{padding:40px 20px;text-align:center;color:var(--accent);font-size:18px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff3;
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="stale-banner">⚠️ Data is over 35 minutes old — offline or Mac is down</div>
+<div id="no-link" style="display:none">Open this app from the link Radha sent (tap the Auctova link on your phone).</div>
+
+<div id="app" style="display:none">
+  <div id="tab-bar"></div>
+
+  <!-- HOME PANE -->
+  <div class="pane active" id="pane-home">
+    <div class="card">
+      <h2>Needs you</h2>
+      <div id="ny-list"><div class="small">Loading…</div></div>
+      <button class="btn sec" id="btn-reroute">Reroute stuck jobs</button>
+      <div class="reply" id="rr-reply" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h2>Goal progress</h2>
+      <div id="goal-rows"><div class="small">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Feedback</h2>
+      <textarea id="fb-text" placeholder="Type feedback…" rows="3"></textarea>
+      <button class="btn sec" id="btn-fb">Send feedback</button>
+      <div class="reply" id="fb-reply" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h3>Web Push</h3>
+      <div id="push-row">
+        <button class="btn sec" id="btn-push" style="margin:0;width:auto;padding:10px 18px;font-size:14px">Enable push</button>
+        <span class="small" id="push-status">Not subscribed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOT PANES (generated) -->
+
+  <!-- JOB PANE -->
+  <div class="pane" id="pane-job">
+    <div class="card">
+      <h2>New job</h2>
+      <label class="small">Bot</label>
+      <select id="job-bot"></select>
+      <label class="small">Type</label>
+      <select id="job-type">
+        <option value="cheap">cheap</option>
+        <option value="draft">draft</option>
+        <option value="research-live">research-live</option>
+        <option value="check">check</option>
+        <option value="code">code</option>
+        <option value="copy">copy</option>
+        <option value="social-read">social-read</option>
+        <option value="web-search">web-search</option>
+      </select>
+      <label class="small">Prompt (max 500 chars)</label>
+      <input type="text" id="job-prompt" maxlength="500" placeholder="One-line prompt…">
+      <div class="small" id="job-rate" style="color:var(--accent)"></div>
+      <button class="btn" id="btn-job">Submit job</button>
+      <div class="reply" id="job-reply" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const BOTS=['radha','brihaspati','vyasa','sanjaya','lakshmi','vidura','chitragupta','agni','medha','saraswati','narada','garuda','kubera','hanuman'];
+const TYPES=['cheap','draft','research-live','check','code','copy','social-read','web-search'];
+
+// ── credentials ─────────────────────────────────────────────────────────────
+const q=new URLSearchParams(location.hash.slice(1));
+let L=q.get('l'), S=q.get('s');
+if(L&&S){localStorage.setItem('agy_l',L);localStorage.setItem('agy_s',S)}
+else{L=localStorage.getItem('agy_l')||localStorage.getItem('l');S=localStorage.getItem('agy_s')||localStorage.getItem('s')}
+
+if(!L||!S){
+  document.getElementById('no-link').style.display='';
+} else {
+  document.getElementById('app').style.display='';
+  init();
+}
+
+// ── stale banner ─────────────────────────────────────────────────────────────
+function checkStale(){
+  const ts=parseInt(localStorage.getItem('agy_last_ts')||'0',10);
+  if(!ts||(Date.now()/1000-ts)>35*60){
+    const bn=document.getElementById('stale-banner');
+    bn.textContent='⚠️ Data is over 35 minutes old'+(ts?' (last '+new Date(ts*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+')':'')+' — offline or the Mac is down';
+    bn.style.display='';
+  } else {
+    document.getElementById('stale-banner').style.display='none';
+  }
+}
+setInterval(checkStale,60000);
+checkStale();
+
+// ── tabs ──────────────────────────────────────────────────────────────────────
+function buildTabs(){
+  const bar=document.getElementById('tab-bar');
+  const tabs=[['home','Home'],['job','New Job']];
+  BOTS.forEach(b=>tabs.push([b,b[0].toUpperCase()+b.slice(1)]));
+
+  tabs.forEach(([id,label])=>{
+    // ensure pane exists for bots
+    if(!document.getElementById('pane-'+id)){
+      const div=document.createElement('div');
+      div.className='pane';div.id='pane-'+id;
+      div.innerHTML=`<div class="card"><h2>${label[0].toUpperCase()+label.slice(1)}</h2>
+        <div class="sum-box" id="sum-${id}">Loading summary…</div>
+        <h3>Chat (newest last)</h3><div id="chat-${id}"><div class="small">Loading…</div></div>
+        <button class="btn sec" style="margin-top:12px" data-snap="${id}">Snap now</button>
+        <div class="reply" id="snap-reply-${id}" style="display:none"></div></div>`;
+      document.getElementById('app').insertBefore(div,document.getElementById('pane-job'));
+    }
+    const btn=document.createElement('button');
+    btn.className='tab-btn'+(id==='home'?' active':'');
+    btn.dataset.tab=id;btn.textContent=label;
+    btn.onclick=()=>switchTab(id);
+    bar.appendChild(btn);
+  });
+
+  // Job bot picker
+  const sel=document.getElementById('job-bot');
+  BOTS.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;sel.appendChild(o)});
+
+  // Snap buttons
+  document.querySelectorAll('[data-snap]').forEach(btn=>btn.addEventListener('click',()=>snapBot(btn.dataset.snap,btn)));
+}
+
+function switchTab(id){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const pane=document.getElementById('pane-'+id);
+  if(pane) pane.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>{if(b.dataset.tab===id)b.classList.add('active')});
+  if(id!=='home'&&id!=='job'&&BOTS.includes(id)) loadBotTab(id);
+}
+
+// ── ntfy helpers ─────────────────────────────────────────────────────────────
+const NTFY=localStorage.getItem('agy_ntfy')||'https://ntfy.sh';
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function newRid(){return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>(b%36).toString(36)).join('')}
+
+async function pollSince(topic,since){
+  const r=await fetch(`${NTFY}/${encodeURIComponent(topic)}/json?poll=1&since=${since}`,{cache:'no-store'});
+  return (await r.text()).trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)).filter(m=>m.event==='message');
+}
+async function latestMsg(topic){const a=await pollSince(topic,'latest');return a.length?a[a.length-1]:null}
+
+// Send a command on the cmd topic; the Mac answers on the status topic tagged "[rid] ".
+async function cmd(message,timeoutMs=20000){
+  const id=newRid(), t0=Math.floor(Date.now()/1000)-1, tag='['+id+'] ';
+  await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message:'@'+id+' '+message})});
+  const deadline=Date.now()+timeoutMs;
+  while(Date.now()<deadline){
+    await sleep(1500);
+    try{
+      const m=(await pollSince(S,t0)).find(x=>(x.message||'').startsWith(tag));
+      if(m){localStorage.setItem('agy_last_ts',String(m.time));checkStale();return m.message.slice(tag.length)}
+    }catch(_){}
+  }
+  return null;
+}
+async function cmdRaw(message){
+  await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message})});
+}
+
+// ── last-known data (works offline) ──────────────────────────────────────────
+function saveCache(k,v){localStorage.setItem('agy_c_'+k,JSON.stringify({t:Date.now(),v}))}
+function loadCache(k){try{return JSON.parse(localStorage.getItem('agy_c_'+k))}catch(_){return null}}
+function asOf(t){return 'as of '+new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
+
+// ── home tab ──────────────────────────────────────────────────────────────────
+let _nyItems=[];
+async function freshness(){
+  try{const m=await latestMsg(S);if(m&&m.time>parseInt(localStorage.getItem('agy_last_ts')||'0',10))localStorage.setItem('agy_last_ts',String(m.time))}catch(_){}
+  checkStale();
+}
+function loadHome(){freshness();loadGoal();loadNeedsYou()}
+
+function renderGoal(g,t,live){
+  const el=document.getElementById('goal-rows');el.innerHTML='';
+  [['Leads (live-checked)',g.leads],['Contacts made',g.contacts],['First paid customer',g.paid>0?'Yes':'0']].forEach(([k,v])=>{
+    const d=document.createElement('div');d.className='goal-row';
+    d.innerHTML=`<span>${k}</span><span class="goal-num">${escHtml(String(v))}</span>`;el.appendChild(d);
+  });
+  const u=document.createElement('div');u.className='small';u.style.marginTop='8px';
+  u.textContent=(live?'Updated ':'Last data ')+asOf(t);el.appendChild(u);
+}
+async function loadGoal(){
+  const c=loadCache('goal');if(c)renderGoal(c.v,c.t,false);
+  const r=await cmd('goal',20000);
+  const m=r&&r.match(/^GOAL (\{.*\})$/);
+  if(!m){if(!c)document.getElementById('goal-rows').innerHTML='<div class="small">No data yet (Mac did not reply).</div>';return}
+  const g=JSON.parse(m[1]);saveCache('goal',g);renderGoal(g,Date.now(),true);
+}
+
+function renderNeedsYou(items,t,live){
+  const el=document.getElementById('ny-list');el.innerHTML='';_nyItems=items;
+  if(!items.length){el.innerHTML='<div class="small" style="color:var(--green)">✓ Nothing needs you right now. ('+asOf(t)+')</div>';return}
+  items.forEach((item,idx)=>{
+    const div=document.createElement('div');div.className='ny-item';
+    div.innerHTML=`<p>${escHtml(item.t)}</p>
+      <div class="ny-actions">
+        <button data-a="approve" data-i="${idx}">✓ Approve</button>
+        <button class="rej" data-a="reject" data-i="${idx}">✗ Reject</button>
+        <button class="rr" data-a="reroute" data-i="${idx}">↻ Reroute</button>
+      </div>
+      <div class="reply" id="ny-reply-${idx}" style="display:none"></div>`;
+    el.appendChild(div);
+  });
+  el.querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>actItem(+b.dataset.i,b.dataset.a,el));
+  const u=document.createElement('div');u.className='small';u.textContent=(live?'Updated ':'Last data ')+asOf(t);el.appendChild(u);
+}
+async function loadNeedsYou(){
+  const c=loadCache('needs');if(c)renderNeedsYou(c.v,c.t,false);
+  const r=await cmd('needs',20000);
+  const m=r&&r.match(/^NEEDS (\[.*\])$/);
+  if(!m){if(!c)document.getElementById('ny-list').innerHTML='<div class="small">Mac did not reply.</div>';return}
+  const items=JSON.parse(m[1]);saveCache('needs',items);renderNeedsYou(items,Date.now(),true);
+}
+async function actItem(idx,action,el){
+  const item=_nyItems[idx],rep=document.getElementById('ny-reply-'+idx);
+  rep.style.display='';rep.innerHTML='<span class="spinner"></span>Sending…';
+  el.querySelectorAll('button[data-i="'+idx+'"]').forEach(b=>b.disabled=true);
+  const reply=await cmd(action==='reroute'?'reroute':`${action}|${item.f}|${item.n}|${item.t.slice(0,200)}`,action==='reroute'?30000:20000);
+  rep.textContent=reply||'No reply from Mac (it may be asleep). Nothing was changed.';
+  if(reply&&/^(APPROVED|REJECTED)/.test(reply))setTimeout(loadNeedsYou,1500);
+  else el.querySelectorAll('button[data-i="'+idx+'"]').forEach(b=>b.disabled=false);
+}
+
+// ── reroute ──────────────────────────────────────────────────────────────────
+document.getElementById('btn-reroute').onclick=async function(){
+  const btn=this,rep=document.getElementById('rr-reply');
+  btn.disabled=true;rep.style.display='';rep.innerHTML='<span class="spinner"></span>Rerouting…';
+  rep.textContent=(await cmd('reroute',30000))||'No reply from Mac.';
+  btn.disabled=false;
+};
+
+// ── feedback ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-fb').onclick=async function(){
+  const text=document.getElementById('fb-text').value.trim();
+  if(!text) return;
+  const btn=this,rep=document.getElementById('fb-reply');
+  btn.disabled=true;rep.style.display='';rep.innerHTML='<span class="spinner"></span>Sending…';
+  const reply=await cmd('feedback|'+text.slice(0,500),20000);
+  rep.textContent=reply||'No reply from Mac. Your note was not confirmed saved.';
+  if(reply)document.getElementById('fb-text').value='';
+  btn.disabled=false;
+};
+
+// ── job form ──────────────────────────────────────────────────────────────────
+const JOB_LIMIT=12, JOB_WINDOW=10*60*1000; // mirrors the task server guard: 12 per 10 min per desk
+function jobsThisWindow(desk){
+  try{return JSON.parse(localStorage.getItem('agy_joblimit_'+desk)||'[]').filter(ts=>Date.now()-ts<JOB_WINDOW)}catch(_){return[]}
+}
+function recordJob(desk){
+  const d=jobsThisWindow(desk);d.push(Date.now());localStorage.setItem('agy_joblimit_'+desk,JSON.stringify(d));
+}
+document.getElementById('job-bot').addEventListener('change',updateJobRate);
+function updateJobRate(){
+  const desk=document.getElementById('job-bot').value,n=jobsThisWindow(desk).length;
+  document.getElementById('job-rate').textContent=n>0?`${n}/${JOB_LIMIT} jobs in last 10 min for ${desk}`:'';
+  document.getElementById('btn-job').disabled=n>=JOB_LIMIT;
+}
+document.getElementById('btn-job').onclick=async function(){
+  const bot=document.getElementById('job-bot').value,type=document.getElementById('job-type').value;
+  const prompt=document.getElementById('job-prompt').value.trim();
+  if(!prompt) return;
+  const btn=this,rep=document.getElementById('job-reply');
+  btn.disabled=true;rep.style.display='';rep.innerHTML='<span class="spinner"></span>Submitting…';
+  const reply=await cmd(`job|${bot}|${type}|${prompt.slice(0,500)}`,25000);
+  const m=reply&&reply.match(/^Job queued: (\S+)/);
+  if(!m){rep.textContent=reply||'No reply from Mac. The job was not confirmed.';btn.disabled=false;updateJobRate();return}
+  recordJob(bot);updateJobRate();
+  rep.textContent='Queued: '+m[1]+'\nWaiting for result…';
+  pollJobResult(m[1],rep);
+};
+async function pollJobResult(id,el){
+  const deadline=Date.now()+10*60*1000;
+  while(Date.now()<deadline){
+    await sleep(8000);
+    const r=await cmd('result|'+id,20000);
+    if(r&&/^RESULT (done|failed|error)/.test(r)){el.textContent='Job '+id+'\n'+r;return}
+  }
+  el.textContent='Job '+id+'\nStill running after 10 min. Check again from the Needs-you list later.';
+}
+
+// ── bot tabs ─────────────────────────────────────────────────────────────────
+const _botLoaded={};
+function renderBot(bot,sum,chat,t,live){
+  document.getElementById('sum-'+bot).textContent=(sum||'No summary yet (written every 30 min by the Mac).')+'\n\n'+(live?'Updated ':'Last data ')+asOf(t);
+  const el=document.getElementById('chat-'+bot);el.innerHTML='';
+  if(!chat.length){el.innerHTML='<div class="small">No chat lines.</div>';return}
+  chat.forEach(l=>{const d=document.createElement('div');d.className='chat-line';d.textContent=l;el.appendChild(d)});
+}
+function chatOf(body){
+  const lines=(body||'').split('\n'),i=lines.findIndex(l=>/^CHAT/i.test(l));
+  if(i<0)return lines.slice(0,8);
+  const j=lines.findIndex((l,k)=>k>i&&/^[A-Z][A-Z ]{5,}/.test(l));
+  return lines.slice(i+1,j>i?j:i+9).filter(Boolean);
+}
+async function loadBotTab(bot,force){
+  if(!force&&_botLoaded[bot]&&Date.now()-_botLoaded[bot]<30000)return;
+  _botLoaded[bot]=Date.now();
+  const c=loadCache('bot_'+bot);if(c)renderBot(bot,c.v.sum,c.v.chat,c.t,false);
+  try{
+    const [s,b]=await Promise.all([latestMsg(S+'-sum-'+bot),latestMsg(S+'-'+bot)]);
+    const v={sum:s?s.message:(c?c.v.sum:''),chat:b?chatOf(b.message):(c?c.v.chat:[])};
+    saveCache('bot_'+bot,v);renderBot(bot,v.sum,v.chat,Date.now(),true);
+  }catch(_){if(!c)document.getElementById('sum-'+bot).textContent='Offline and no saved data for this bot yet.'}
+}
+async function snapBot(bot,btn){
+  const rep=document.getElementById('snap-reply-'+bot);
+  btn.disabled=true;rep.style.display='';rep.innerHTML='<span class="spinner"></span>Asking Mac…';
+  await cmdRaw('snap '+bot);await sleep(6000);
+  await loadBotTab(bot,true);rep.textContent='Refreshed.';btn.disabled=false;
+}
+
+// ── Web Push ──────────────────────────────────────────────────────────────────
+let _vapidKey=null;
+
+async function getVapidKey(){
+  if(_vapidKey) return _vapidKey;
+  try{
+    const r=await fetch('/p-0a33d13f77ba917c/app/vapid_public.txt');
+    _vapidKey=(await r.text()).trim();
+    return _vapidKey;
+  }catch(_){return null}
+}
+
+function urlBase64ToUint8(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=atob(base64);
+  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0)));
+}
+
+async function subscribePush(){
+  const statusEl=document.getElementById('push-status');
+  const btn=document.getElementById('btn-push');
+  if(!('serviceWorker' in navigator&&'PushManager' in window)){
+    statusEl.textContent='Push not supported in this browser.';return;
+  }
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){statusEl.textContent='Permission denied.';return}
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const vapidKey=await getVapidKey();
+    if(!vapidKey){statusEl.textContent='No VAPID key.';return}
+    const sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8(vapidKey)
+    });
+    statusEl.textContent='Subscribed ✓';
+    btn.textContent='Renew push';
+    // Send subscription to Mac
+    const payload='push_sub|'+JSON.stringify(sub.toJSON());
+    await cmdRaw(payload);
+    localStorage.setItem('agy_push_sub','1');
+  }catch(e){statusEl.textContent='Subscribe failed: '+e.message}
+}
+
+document.getElementById('btn-push').onclick=subscribePush;
+
+// Auto-subscribe if already granted
+async function autoSubscribe(){
+  if(typeof Notification==='undefined') return;
+  if(Notification.permission==='granted'&&localStorage.getItem('agy_push_sub')){
+    document.getElementById('push-status').textContent='Subscribed ✓';
+    document.getElementById('btn-push').textContent='Renew push';
+    // Silently renew in background
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const existing=await reg.pushManager.getSubscription();
+      if(existing){
+        const payload='push_sub|'+JSON.stringify(existing.toJSON());
+        await cmdRaw(payload);
+      }
+    }catch(_){}
+  }
+}
+
+// ── SW registration ───────────────────────────────────────────────────────────
+async function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  try{
+    const reg=await navigator.serviceWorker.register('/p-0a33d13f77ba917c/app/sw.js',{scope:'/p-0a33d13f77ba917c/app/'});
+    // Ask SW for VAPID key
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data&&e.data.type==='vapid') _vapidKey=e.data.key;
+    });
+    if(reg.active) reg.active.postMessage('get-vapid');
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      if(nw) nw.addEventListener('statechange',()=>{if(nw.state==='installed')console.log('SW updated')});
+    });
+  }catch(e){console.warn('SW reg failed',e)}
+}
+
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+async function init(){
+  buildTabs();
+  await registerSW();
+  autoSubscribe();
+  loadHome();
+  // Refresh on visibility
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){
+      checkStale();
+      loadHome();
+    }
+  });
+}
+</script>
+</body>
+</html>

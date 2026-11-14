@@ -27,6 +27,7 @@ async function ask(cmd){const t0=Math.floor(Date.now()/1000)-1;
 async function refresh(){$('rf').disabled=true;$('note').textContent='Checking…';await ask('snap');$('rf').disabled=false}
 $('rf').onclick=refresh;
 $('rr').onclick=async()=>{$('rr').disabled=true;$('note').textContent='Asking the Mac…';await ask('reroute');setTimeout(refresh,60000);setTimeout(()=>$('rr').disabled=false,60000)};
+if(L&&S){const n=document.createElement('a');n.href=`app/#l=${L}&s=${S}`;n.textContent='New app';n.style.cssText='display:block;color:#fca311;padding:12px 0;font-weight:800;border-bottom:1px solid #2a3f6a;margin-bottom:6px';$('bots').insertBefore(n,$('bots').firstChild)}
 ['radha', 'brihaspati', 'vyasa', 'sanjaya', 'lakshmi', 'vidura', 'chitragupta', 'agni', 'medha', 'saraswati', 'narada', 'garuda', 'kubera', 'hanuman'].forEach(b=>{if(!L||!S)return;const a=document.createElement('a');a.href=`b/#l=${L}&s=${S}&b=${b}`;a.textContent=b[0].toUpperCase()+b.slice(1);a.style.cssText='display:block;color:#fca311;padding:12px 0';$('bots').appendChild(a)});
 if(!L||!S){$('note').textContent='Open this app from the link Radha sent.'}else refresh();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&L)refresh()});
