@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Auctova bots"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex"><link rel="apple-touch-icon" href="../icon.png"><title>Auctova bots</title>
+<style>
+body{margin:0;background:#14213d;color:#fff;font:600 22px/1.4 -apple-system,system-ui,sans-serif;padding:calc(env(safe-area-inset-top) + 24px) 22px 30px}
+#note{color:#fca311;min-height:1.4em;font-size:19px}#lines div{overflow-wrap:anywhere;background:#1f3160;border-radius:14px;padding:16px;margin:12px 0}
+#when{color:#9fb0d0;font-size:15px;font-weight:400}button{width:100%;font:700 21px -apple-system,system-ui;border:0;border-radius:14px;padding:18px;margin-top:14px}
+#rr{background:#fca311;color:#14213d}#rf{background:#2e4a8a;color:#fff}button:disabled{opacity:.5}
+</style></head><body>
+<select id="pick" style="width:100%;font:700 21px -apple-system,system-ui;padding:14px;border-radius:14px;margin-bottom:10px"><option value="radha">Radha</option><option value="brihaspati">Brihaspati</option><option value="vyasa">Vyasa</option><option value="sanjaya">Sanjaya</option><option value="lakshmi">Lakshmi</option><option value="vidura">Vidura</option><option value="chitragupta">Chitragupta</option><option value="agni">Agni</option><option value="medha">Medha</option><option value="saraswati">Saraswati</option><option value="narada">Narada</option><option value="garuda">Garuda</option><option value="kubera">Kubera</option><option value="hanuman">Hanuman</option></select><div id="note">Loading…</div><div id="lines"></div><div id="when"></div>
+<button id="rf">Refresh</button>
+<script>
+const q=new URLSearchParams(location.hash.slice(1));let B=q.get('b')||localStorage.getItem('b')||'radha';localStorage.setItem('b',B);let L=q.get('l'),S=q.get('s');
+if(L&&S){localStorage.setItem('l',L);localStorage.setItem('s',S)}else{L=localStorage.getItem('l');S=localStorage.getItem('s')}
+const $=id=>document.getElementById(id);
+function show(m,t){const ls=m.split('\n').filter(x=>x.trim());let note='';
+ $('note').textContent=note;
+ $('lines').innerHTML='';ls.forEach(x=>{const d=document.createElement('div');const k=x.match(/^- \[(.+)\]\((https:\/\/[^ )]+)\)$/);if(/^(CHAT|WORKING ON NOW|DONE TODAY|STUCK AND WHY|NEEDS YASH)/.test(x)){d.textContent=x;d.style.cssText="background:none;color:#fca311;font-size:16px;padding:14px 0 0;margin:0"}else if(k){const a=document.createElement('a');a.href=k[2];a.target='_blank';a.rel='noopener';a.textContent=k[1];a.style.color='#fca311';d.appendChild(a)}else d.textContent=x;$('lines').appendChild(d)});
+ $('when').textContent='Updated '+new Date(t*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
+async function latest(){const r=await fetch(`https://ntfy.sh/${S}-${B}/json?poll=1&since=latest`,{cache:'no-store'});const t=(await r.text()).trim().split('\n').pop();return t?JSON.parse(t):null}
+async function ask(cmd){const t0=Math.floor(Date.now()/1000)-1;
+ await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:L,message:cmd})});
+ for(let i=0;i<15;i++){await new Promise(r=>setTimeout(r,1000));const m=await latest().catch(()=>null);if(m&&m.time>=t0){show(m.message,m.time);return true}}
+ const m=await latest().catch(()=>null);if(m)show(m.message,m.time);$('note').textContent='Mac did not answer in 15 seconds. This is the last status.';return false}
+async function refresh(){$('rf').disabled=true;$('note').textContent='Checking…';await ask('snap '+B);$('rf').disabled=false}
+$('rf').onclick=refresh;$('pick').value=B;$('pick').onchange=()=>{B=$('pick').value;localStorage.setItem('b',B);$('lines').innerHTML='';refresh()};
+
+if(!L||!S){$('note').textContent='Open this app from the link Radha sent.'}else refresh();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&L)refresh()});
+</script></body></html>
