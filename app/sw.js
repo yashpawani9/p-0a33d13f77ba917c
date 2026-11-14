@@ -1,5 +1,5 @@
 /* Auctova PWA v2 service worker */
-const CACHE = 'auctova-v2-2';
+const CACHE = 'auctova-v2-3';
 const SHELL = [
   '/p-0a33d13f77ba917c/app/',
   '/p-0a33d13f77ba917c/app/index.html',
@@ -59,7 +59,8 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let data = { title: 'Auctova', body: 'New update' };
   try { data = e.data.json(); } catch (_) { try { data.body = e.data.text(); } catch (_) {} }
-  e.waitUntil(
+  e.waitUntil(Promise.all([
+    self.clients.matchAll({ includeUncontrolled: true }).then(cs => cs.forEach(c => c.postMessage({ type: 'push', data }))),
     self.registration.showNotification(data.title || 'Auctova', {
       body: data.body || '',
       icon: '/p-0a33d13f77ba917c/icon.png',
@@ -67,7 +68,7 @@ self.addEventListener('push', e => {
       tag: 'auctova-push',
       renotify: true,
     })
-  );
+  ]));
 });
 
 self.addEventListener('notificationclick', e => {

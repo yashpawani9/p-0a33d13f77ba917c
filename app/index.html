@@ -77,6 +77,7 @@ textarea{min-height:80px;resize:vertical}
     <div class="card">
       <h2>Needs you</h2>
       <div id="ny-list"><div class="small">Loading…</div></div>
+      <div class="reply" id="last-action" style="display:none"></div>
       <button class="btn sec" id="btn-reroute">Reroute stuck jobs</button>
       <div class="reply" id="rr-reply" style="display:none"></div>
     </div>
@@ -287,12 +288,15 @@ async function loadNeedsYou(){
   if(!m){if(!c)document.getElementById('ny-list').innerHTML='<div class="small">Mac did not reply.</div>';return}
   const items=JSON.parse(m[1]);saveCache('needs',items);renderNeedsYou(items,Date.now(),true);
 }
+function setLast(t){const s=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' '+t;localStorage.setItem('agy_lastaction',s);showLast()}
+function showLast(){const e=document.getElementById('last-action'),t=localStorage.getItem('agy_lastaction');if(t){e.style.display='';e.textContent='Last action: '+t}}
 async function actItem(idx,action,el){
   const item=_nyItems[idx],rep=document.getElementById('ny-reply-'+idx);
   rep.style.display='';rep.innerHTML='<span class="spinner"></span>Sending…';
   el.querySelectorAll('button[data-i="'+idx+'"]').forEach(b=>b.disabled=true);
   const reply=await cmd(action==='reroute'?'reroute':`${action}|${item.f}|${item.n}|${item.t.slice(0,200)}`,action==='reroute'?30000:20000);
   rep.textContent=reply||'No reply from Mac (it may be asleep). Nothing was changed.';
+  setLast((action==='reroute'?'Reroute: ':action+': ')+rep.textContent);
   if(reply&&/^(APPROVED|REJECTED)/.test(reply))setTimeout(loadNeedsYou,1500);
   else el.querySelectorAll('button[data-i="'+idx+'"]').forEach(b=>b.disabled=false);
 }
@@ -475,6 +479,8 @@ async function init(){
   buildTabs();
   await registerSW();
   autoSubscribe();
+  showLast();
+  navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='push')window.__push=e.data.data});
   loadHome();
   // Refresh on visibility
   document.addEventListener('visibilitychange',()=>{
