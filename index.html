@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Auctova"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex"><link rel="apple-touch-icon" href="icon.png"><title>Auctova</title>
+<style>
+body{margin:0;background:#14213d;color:#fff;font:600 22px/1.4 -apple-system,system-ui,sans-serif;padding:calc(env(safe-area-inset-top) + 24px) 22px 30px}
+#note{color:#fca311;min-height:1.4em;font-size:19px}#lines div{background:#1f3160;border-radius:14px;padding:16px;margin:12px 0}
+#when{color:#9fb0d0;font-size:15px;font-weight:400}button{width:100%;font:700 21px -apple-system,system-ui;border:0;border-radius:14px;padding:18px;margin-top:14px}
+#rr{background:#fca311;color:#14213d}#rf{background:#2e4a8a;color:#fff}button:disabled{opacity:.5}
+</style></head><body>
+<div id="note">Loading…</div><div id="lines"></div><div id="when"></div>
+<button id="rr">Reroute stuck jobs</button><button id="rf">Refresh</button>
+<script>
+const q=new URLSearchParams(location.hash.slice(1));let L=q.get('l'),S=q.get('s');
+if(L&&S){localStorage.setItem('l',L);localStorage.setItem('s',S)}else{L=localStorage.getItem('l');S=localStorage.getItem('s')}
+const $=id=>document.getElementById(id);
+function show(m,t){const ls=m.split('\n').filter(x=>x.trim());let note='';
+ if(ls.length>3)note=ls.shift();$('note').textContent=note;
+ $('lines').innerHTML='';ls.forEach(x=>{const d=document.createElement('div');d.textContent=x;$('lines').appendChild(d)});
+ $('when').textContent='Updated '+new Date(t*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
+async function latest(){const r=await fetch(`https://ntfy.sh/${S}/json?poll=1&since=latest`,{cache:'no-store'});const t=(await r.text()).trim().split('\n').pop();return t?JSON.parse(t):null}
+async function ask(cmd){const t0=Math.floor(Date.now()/1000)-1;
+ await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:L,message:cmd})});
+ for(let i=0;i<15;i++){await new Promise(r=>setTimeout(r,1000));const m=await latest().catch(()=>null);if(m&&m.time>=t0){show(m.message,m.time);return true}}
+ const m=await latest().catch(()=>null);if(m)show(m.message,m.time);$('note').textContent='Mac did not answer in 15 seconds. This is the last status.';return false}
+async function refresh(){$('rf').disabled=true;$('note').textContent='Checking…';await ask('snap');$('rf').disabled=false}
+$('rf').onclick=refresh;
+$('rr').onclick=async()=>{$('rr').disabled=true;$('note').textContent='Asking the Mac…';await ask('reroute');setTimeout(refresh,60000);setTimeout(()=>$('rr').disabled=false,60000)};
+if(!L||!S){$('note').textContent='Open this app from the link Radha sent.'}else refresh();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&L)refresh()});
+</script></body></html>
