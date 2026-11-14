@@ -17,7 +17,7 @@ if(L&&S){localStorage.setItem('l',L);localStorage.setItem('s',S)}else{L=localSto
 const $=id=>document.getElementById(id);
 function show(m,t){const ls=m.split('\n').filter(x=>x.trim());let note='';
  if(ls.length&&/^(Already|Rerouting)/.test(ls[0]))note=ls.shift();$('note').textContent=note;
- $('lines').innerHTML='';ls.forEach(x=>{const d=document.createElement('div');d.textContent=x;$('lines').appendChild(d)});
+ $('lines').innerHTML='';ls.forEach(x=>{const d=document.createElement('div');const k=x.match(/^- \[(.+)\]\((https:\/\/[^ )]+)\)$/);if(k){const a=document.createElement('a');a.href=k[2];a.target='_blank';a.rel='noopener';a.textContent=k[1];a.style.color='#fca311';d.appendChild(a)}else d.textContent=x;$('lines').appendChild(d)});
  $('when').textContent='Updated '+new Date(t*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
 async function latest(){const r=await fetch(`https://ntfy.sh/${S}/json?poll=1&since=latest`,{cache:'no-store'});const t=(await r.text()).trim().split('\n').pop();return t?JSON.parse(t):null}
 async function ask(cmd){const t0=Math.floor(Date.now()/1000)-1;
