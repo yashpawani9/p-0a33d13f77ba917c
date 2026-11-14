@@ -16,7 +16,7 @@ const q=new URLSearchParams(location.hash.slice(1));let L=q.get('l'),S=q.get('s'
 if(L&&S){localStorage.setItem('l',L);localStorage.setItem('s',S)}else{L=localStorage.getItem('l');S=localStorage.getItem('s')}
 const $=id=>document.getElementById(id);
 function show(m,t){const ls=m.split('\n').filter(x=>x.trim());let note='';
- if(ls.length>3)note=ls.shift();$('note').textContent=note;
+ if(ls.length&&/^(Already|Rerouting)/.test(ls[0]))note=ls.shift();$('note').textContent=note;
  $('lines').innerHTML='';ls.forEach(x=>{const d=document.createElement('div');d.textContent=x;$('lines').appendChild(d)});
  $('when').textContent='Updated '+new Date(t*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});}
 async function latest(){const r=await fetch(`https://ntfy.sh/${S}/json?poll=1&since=latest`,{cache:'no-store'});const t=(await r.text()).trim().split('\n').pop();return t?JSON.parse(t):null}
