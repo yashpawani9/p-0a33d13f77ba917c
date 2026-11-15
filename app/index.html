@@ -219,14 +219,14 @@ async function latestMsg(topic){const a=await pollSince(topic,'latest');return a
 // Send a command on the cmd topic; the Mac answers on the status topic tagged "[rid] ".
 const _pending=new Map();let _polling=false;
 async function _pollLoop(){
-  if(_polling)return;_polling=true;let wait=2000;
+  if(_polling)return;_polling=true;let wait=2000,n=0;
   while(_pending.size){
     await sleep(wait);
     try{
       const t0=Math.min(...Array.from(_pending.values(),p=>p.t0));
       const r=await fetch(`${NTFY}/${encodeURIComponent(S)}/json?poll=1&since=${t0}`,{cache:'no-store'});
       if(!r.ok){wait=Math.min(wait*2,15000);continue}
-      wait=2000;
+      wait=++n<6?2000:5000;
       const msgs=(await r.text()).trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)).filter(m=>m.event==='message');
       for(const [id,p] of _pending){
         const m=msgs.find(x=>(x.message||'').startsWith('['+id+'] '));
@@ -241,8 +241,16 @@ async function _pollLoop(){
 // Send a command on the cmd topic; the Mac answers on the status topic tagged "[rid] ". One shared poller serves all pending commands (ntfy.sh rate-limits per IP).
 async function cmd(message,timeoutMs=20000){
   const id=newRid(), t0=Math.floor(Date.now()/1000)-1;
-  const out=new Promise(done=>_pending.set(id,{t0,deadline:Date.now()+timeoutMs,done}));
-  try{await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message:'@'+id+' '+message})})}catch(_){_pending.delete(id);return null}
+  const out=new Promise(done=>_pending.set(id,{t0,deadline:Infinity,done}));
+  // ntfy.sh anonymous limit is per IP and answers 429 when the bucket is empty: wait and retry the POST instead of giving up.
+  let ok=false;
+  for(let i=0;i<6&&!ok;i++){
+    try{const r=await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message:'@'+id+' '+message})});
+      if(r.ok)ok=true;else if(r.status!==429)break}catch(_){break}
+    if(!ok)await sleep(5000*(i+1));
+  }
+  if(!ok){_pending.delete(id);return null}
+  const pe=_pending.get(id);if(pe)pe.deadline=Date.now()+timeoutMs;
   _pollLoop();
   return out;
 }
