@@ -269,7 +269,8 @@ async function freshness(){
   try{const m=await latestMsg(S);if(m&&m.time>parseInt(localStorage.getItem('agy_last_ts')||'0',10))localStorage.setItem('agy_last_ts',String(m.time))}catch(_){}
   checkStale();
 }
-function loadHome(){freshness();loadGoal();loadNeedsYou()}
+let _homeAt=0;
+function loadHome(){freshness();_homeAt=Date.now();loadGoalNeeds()}
 
 function renderGoal(g,t,live){
   const el=document.getElementById('goal-rows');el.innerHTML='';
@@ -280,12 +281,19 @@ function renderGoal(g,t,live){
   const u=document.createElement('div');u.className='small';u.style.marginTop='8px';
   u.textContent=(live?'Updated ':'Last data ')+asOf(t);el.appendChild(u);
 }
-async function loadGoal(){
-  const c=loadCache('goal');if(c)renderGoal(c.v,c.t,false);
-  const r=await cmd('goal',20000);
-  const m=r&&r.match(/^GOAL (\{.*\})$/);
-  if(!m){if(!c)document.getElementById('goal-rows').innerHTML='<div class="small">No data yet (Mac did not reply).</div>';return}
-  const g=JSON.parse(m[1]);saveCache('goal',g);renderGoal(g,Date.now(),true);
+// One "home" command answers goal + needs together: ntfy.sh anonymous accounts get a small daily message quota, and every command costs 2 messages.
+async function loadGoalNeeds(){
+  const cg=loadCache('goal'),cn=loadCache('needs');
+  if(cg)renderGoal(cg.v,cg.t,false);if(cn)renderNeedsYou(cn.v,cn.t,false);
+  const r=await cmd('home',20000);
+  const m=r&&r.match(/^HOME (\{.*\})$/);
+  if(!m){
+    if(!cg)document.getElementById('goal-rows').innerHTML='<div class="small">No data yet (Mac did not reply).</div>';
+    if(!cn)document.getElementById('ny-list').innerHTML='<div class="small">Mac did not reply.</div>';
+    return;
+  }
+  const h=JSON.parse(m[1]);saveCache('goal',h.g);saveCache('needs',h.n);
+  renderGoal(h.g,Date.now(),true);renderNeedsYou(h.n,Date.now(),true);
 }
 
 function renderNeedsYou(items,t,live){
@@ -305,13 +313,6 @@ function renderNeedsYou(items,t,live){
   el.querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>actItem(+b.dataset.i,b.dataset.a,el));
   const u=document.createElement('div');u.className='small';u.textContent=(live?'Updated ':'Last data ')+asOf(t);el.appendChild(u);
 }
-async function loadNeedsYou(){
-  const c=loadCache('needs');if(c)renderNeedsYou(c.v,c.t,false);
-  const r=await cmd('needs',20000);
-  const m=r&&r.match(/^NEEDS (\[.*\])$/);
-  if(!m){if(!c)document.getElementById('ny-list').innerHTML='<div class="small">Mac did not reply.</div>';return}
-  const items=JSON.parse(m[1]);saveCache('needs',items);renderNeedsYou(items,Date.now(),true);
-}
 function setLast(t){const s=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' '+t;localStorage.setItem('agy_lastaction',s);showLast()}
 function showLast(){const e=document.getElementById('last-action'),t=localStorage.getItem('agy_lastaction');if(t){e.style.display='';e.textContent='Last action: '+t}}
 async function actItem(idx,action,el){
@@ -321,7 +322,7 @@ async function actItem(idx,action,el){
   const reply=await cmd(action==='reroute'?'reroute':`${action}|${item.f}|${item.n}|${item.t.slice(0,200)}`,action==='reroute'?30000:20000);
   rep.textContent=reply||'No reply from Mac (it may be asleep). Nothing was changed.';
   setLast((action==='reroute'?'Reroute: ':action+': ')+rep.textContent);
-  if(reply&&/^(APPROVED|REJECTED)/.test(reply))setTimeout(loadNeedsYou,1500);
+  if(reply&&/^(APPROVED|REJECTED)/.test(reply))setTimeout(loadGoalNeeds,1500);
   else el.querySelectorAll('button[data-i="'+idx+'"]').forEach(b=>b.disabled=false);
 }
 
@@ -373,9 +374,9 @@ document.getElementById('btn-job').onclick=async function(){
   pollJobResult(m[1],rep);
 };
 async function pollJobResult(id,el){
-  const deadline=Date.now()+10*60*1000;
+  const deadline=Date.now()+10*60*1000;let wait=12000;
   while(Date.now()<deadline){
-    await sleep(12000);
+    await sleep(wait);wait=Math.min(wait*1.5,60000); // every poll costs 2 ntfy messages: back off
     const r=await cmd('result|'+id,20000);
     if(r&&/^RESULT (done|failed|error)/.test(r)){el.textContent='Job '+id+'\n'+r;return}
   }
@@ -510,7 +511,7 @@ async function init(){
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){
       checkStale();
-      loadHome();
+      if(Date.now()-_homeAt>120000)loadHome();
     }
   });
 }
