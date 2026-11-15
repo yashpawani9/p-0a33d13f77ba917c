@@ -217,18 +217,34 @@ async function pollSince(topic,since){
 async function latestMsg(topic){const a=await pollSince(topic,'latest');return a.length?a[a.length-1]:null}
 
 // Send a command on the cmd topic; the Mac answers on the status topic tagged "[rid] ".
-async function cmd(message,timeoutMs=20000){
-  const id=newRid(), t0=Math.floor(Date.now()/1000)-1, tag='['+id+'] ';
-  await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message:'@'+id+' '+message})});
-  const deadline=Date.now()+timeoutMs;
-  while(Date.now()<deadline){
-    await sleep(1500);
+const _pending=new Map();let _polling=false;
+async function _pollLoop(){
+  if(_polling)return;_polling=true;let wait=2000;
+  while(_pending.size){
+    await sleep(wait);
     try{
-      const m=(await pollSince(S,t0)).find(x=>(x.message||'').startsWith(tag));
-      if(m){localStorage.setItem('agy_last_ts',String(m.time));checkStale();return m.message.slice(tag.length)}
-    }catch(_){}
+      const t0=Math.min(...Array.from(_pending.values(),p=>p.t0));
+      const r=await fetch(`${NTFY}/${encodeURIComponent(S)}/json?poll=1&since=${t0}`,{cache:'no-store'});
+      if(!r.ok){wait=Math.min(wait*2,15000);continue}
+      wait=2000;
+      const msgs=(await r.text()).trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)).filter(m=>m.event==='message');
+      for(const [id,p] of _pending){
+        const m=msgs.find(x=>(x.message||'').startsWith('['+id+'] '));
+        if(m){_pending.delete(id);localStorage.setItem('agy_last_ts',String(m.time));checkStale();p.done(m.message.slice(id.length+3))}
+      }
+    }catch(_){wait=Math.min(wait*2,15000)}
+    const now=Date.now();
+    for(const [id,p] of _pending)if(now>p.deadline){_pending.delete(id);p.done(null)}
   }
-  return null;
+  _polling=false;
+}
+// Send a command on the cmd topic; the Mac answers on the status topic tagged "[rid] ". One shared poller serves all pending commands (ntfy.sh rate-limits per IP).
+async function cmd(message,timeoutMs=20000){
+  const id=newRid(), t0=Math.floor(Date.now()/1000)-1;
+  const out=new Promise(done=>_pending.set(id,{t0,deadline:Date.now()+timeoutMs,done}));
+  try{await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message:'@'+id+' '+message})})}catch(_){_pending.delete(id);return null}
+  _pollLoop();
+  return out;
 }
 async function cmdRaw(message){
   await fetch(NTFY,{method:'POST',body:JSON.stringify({topic:L,message})});
