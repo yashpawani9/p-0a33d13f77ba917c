@@ -1,5 +1,5 @@
 /* Auctova PWA v2 service worker */
-const CACHE = 'auctova-v2-7';
+const CACHE = 'auctova-v2-8';
 const SHELL = [
   '/p-0a33d13f77ba917c/app/',
   '/p-0a33d13f77ba917c/app/index.html',
