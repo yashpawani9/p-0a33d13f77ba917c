@@ -367,7 +367,7 @@ document.getElementById('btn-job').onclick=async function(){
 async function pollJobResult(id,el){
   const deadline=Date.now()+10*60*1000;
   while(Date.now()<deadline){
-    await sleep(8000);
+    await sleep(12000);
     const r=await cmd('result|'+id,20000);
     if(r&&/^RESULT (done|failed|error)/.test(r)){el.textContent='Job '+id+'\n'+r;return}
   }
