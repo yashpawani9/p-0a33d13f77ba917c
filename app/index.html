@@ -226,7 +226,7 @@ async function _pollLoop(){
       const t0=Math.min(...Array.from(_pending.values(),p=>p.t0));
       const r=await fetch(`${NTFY}/${encodeURIComponent(S)}/json?poll=1&since=${t0}`,{cache:'no-store'});
       if(!r.ok){wait=Math.min(wait*2,15000);continue}
-      wait=++n<6?2000:5000;
+      wait=++n<4?2000:8000; // steady state 7.5 req/min: ntfy.sh allows 60 per 5 min per IP, shared with the Mac's replies
       const msgs=(await r.text()).trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)).filter(m=>m.event==='message');
       for(const [id,p] of _pending){
         const m=msgs.find(x=>(x.message||'').startsWith('['+id+'] '));
